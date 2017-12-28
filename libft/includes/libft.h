@@ -120,4 +120,6 @@ char				**ft_freetwod(char **str);
 int					ft_strlcmp(const char *s1, const char *s2, int size);
 int					get_next_line(const int fd, char **line);
 
+void				ft_qsort_str(char **arr, int l, int r);
+
 #endif
