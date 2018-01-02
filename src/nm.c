@@ -11,6 +11,7 @@
 /* ************************************************************************** */
 
 #include "../include/nm-otool.h"
+#include <stdio.h>
 
 // ok so change quicksort to be generic and accept a void pointer and pointer function. 
 // Then use this to sort the array of nlist_64. once this is done run through the list and
@@ -18,35 +19,40 @@
 // Once this is done, integrate 32 bit and little-endian/big-endian support
 
 char	**extract_load_commands
-		(char *ptr, struct load_command *lc, struct symtab_command *sym)
+		(char *ptr, struct symtab_command *sym)
 {
 	char			**ret;
 	char			*strtable;
 	struct nlist_64	*arr;
-	int				i;
+	uint32_t		i;
+	int				size;
 
 	arr = (void *)ptr + sym->symoff;
 	strtable = (void *)ptr + sym->stroff;
 	ret = malloc(sizeof(char *) * (sym->nsyms + 1));
 	i = 0;
+	size = 0;
 	while (i < sym->nsyms)
 	{
-		ret[i] = ft_strdup(strtable + arr[i].n_un.n_strx);
+		if (!(arr[i].n_type & N_STAB) && ++size)
+			ret[size - 1] = ft_strdup(strtable + arr[i].n_un.n_strx);
 		i++;
 	}
-	ret[sym->nsyms] = 0;
+	ret[size] = 0;
+	ft_qsort_str(ret, 0, size - 1);
 	return (ret);
 }
 
-char	**get_symtab(struct mach_header_64 *h, char *ptr, int ncmds)
+char	**get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
 {
 	struct symtab_command	*sym;
 	struct load_command		*lc;
 	char					**ret;
-	int						i;
+	uint32_t				i;
 
 	i = 0;
 	lc = (void *)ptr + sizeof(*h);
+	sym = NULL;
 	while (i < ncmds)
 	{
 		if (lc->cmd == LC_SYMTAB)
@@ -57,8 +63,7 @@ char	**get_symtab(struct mach_header_64 *h, char *ptr, int ncmds)
 		lc = (void *)lc + lc->cmdsize;
 		i++;
 	}
-	ret = extract_load_commands(ptr, lc, sym);
-	ft_qsort_str(ret, 0, ncmds - 1);
+	ret = extract_load_commands(ptr, sym);
 	return (ret);
 }
 
@@ -67,8 +72,8 @@ void	handle_64(char *ptr)
 	struct mach_header_64	*header;
 	struct load_command		*lc;
 	char					**sym;
-	int						i;
-	int						ncmds;
+	uint32_t				i;
+	uint32_t				ncmds;
 
 	i = 0;
 	header = (struct mach_header_64 *)ptr;
@@ -78,7 +83,7 @@ void	handle_64(char *ptr)
 	while (sym[i])
 	{
 		//decide what type it is here and either print spaces or print the address
-		ft_putstr("                ");
+//		ft_putstr("                ");
 		//print type
 		ft_putendl(sym[i]);
 		i++;
@@ -95,9 +100,9 @@ void	handle_64(char *ptr)
 
 void	ft_nm(char *ptr)
 {
-	int magic_number;
+	uint32_t	magic_number;
 
-    magic_number = *(int *)ptr;
+    magic_number = *(uint32_t *)ptr;
     if (magic_number == MH_MAGIC_64)
 		handle_64(ptr);
 }
