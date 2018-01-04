@@ -11,43 +11,65 @@
 /* ************************************************************************** */
 
 #include "../include/nm-otool.h"
-#include <stdio.h>
 
-// ok so change quicksort to be generic and accept a void pointer and pointer function. 
-// Then use this to sort the array of nlist_64. once this is done run through the list and
-// print the nlist with 16 bits, type, then name
-// Once this is done, integrate 32 bit and little-endian/big-endian support
+int		nlist_64_cmp(char *str, struct nlist_64 *arr, int l, int r, int i)
+{
+	return (ft_strcmp(str + arr[i].n_un.n_strx,
+				str + arr[(l + r) / 2].n_un.n_strx));
+}
 
-char	**extract_load_commands
+void	strtable_64_qsort(char *str, struct nlist_64 *arr, int l, int r)
+{
+	int				i;
+	int				j;
+	struct nlist_64	temp;
+
+	i = l;
+	j = r;
+	while (i <= j)
+	{
+		while (nlist_64_cmp(str, arr, l, r, i) < 0 && i < r)
+			i++;
+		while (nlist_64_cmp(str, arr, l, r, j) > 0 && j > l)
+			j--;
+		if (i <= j)
+		{
+			temp = arr[i];
+			arr[i] = arr[j];
+			arr[j] = temp;
+			i++;
+			j--;
+		}
+	}
+	if (l < j)
+		strtable_64_qsort(str, arr, l, j);
+	if (i < r)
+		strtable_64_qsort(str, arr, i, r);
+}
+
+void	extract_load_commands
 		(char *ptr, struct symtab_command *sym)
 {
-	char			**ret;
 	char			*strtable;
 	struct nlist_64	*arr;
 	uint32_t		i;
-	int				size;
 
 	arr = (void *)ptr + sym->symoff;
 	strtable = (void *)ptr + sym->stroff;
-	ret = malloc(sizeof(char *) * (sym->nsyms + 1));
 	i = 0;
-	size = 0;
+	strtable_64_qsort(strtable, arr, 0, sym->nsyms - 1);
 	while (i < sym->nsyms)
 	{
-		if (!(arr[i].n_type & N_STAB) && ++size)
-			ret[size - 1] = ft_strdup(strtable + arr[i].n_un.n_strx);
+		if (!(arr[i].n_type & N_STAB))
+			ft_putendl(strtable + arr[i].n_un.n_strx);
 		i++;
 	}
-	ret[size] = 0;
-	ft_qsort_str(ret, 0, size - 1);
-	return (ret);
 }
 
-char	**get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
+void	get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
 {
 	struct symtab_command	*sym;
 	struct load_command		*lc;
-	char					**ret;
 	uint32_t				i;
 
 	i = 0;
@@ -63,39 +85,20 @@ char	**get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
 		lc = (void *)lc + lc->cmdsize;
 		i++;
 	}
-	ret = extract_load_commands(ptr, sym);
-	return (ret);
+	printf("B\n");
+	extract_load_commands(ptr, sym);
 }
 
 void	handle_64(char *ptr)
 {
 	struct mach_header_64	*header;
-	struct load_command		*lc;
-	char					**sym;
 	uint32_t				i;
 	uint32_t				ncmds;
 
 	i = 0;
 	header = (struct mach_header_64 *)ptr;
 	ncmds = header->ncmds;
-	sym = get_symtab(header, ptr, ncmds);
-	lc = (void *)ptr + sizeof(*header);
-	while (sym[i])
-	{
-		//decide what type it is here and either print spaces or print the address
-//		ft_putstr("                ");
-		//print type
-		ft_putendl(sym[i]);
-		i++;
-	}
-/*	while (i < ncmds)
-	{
-		// in this loop, check each command against the macros listed in lodaer.h and send to appropriate
-		// function to handle that information.
-
-		lc = (void *)lc + lc->cmdsize;
-		i++;
-	}*/
+	get_symtab(header, ptr, ncmds);
 }
 
 void	ft_nm(char *ptr)
@@ -128,7 +131,7 @@ int 	main(int ac, char **av)
 		write(2, "fstat fail\n", 11);
 		return (EXIT_FAILURE);
 	}
-	if ((ptr = mmap(0, buf.st_size, PROT_READ, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
+	if ((ptr = mmap(0, buf.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
 	{
 		write(2, "mmap fail\n", 10);
 		return (EXIT_FAILURE);
