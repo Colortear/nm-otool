@@ -14,6 +14,7 @@ $(NAME1) :
 clean:
 	@make -C ./libft clean
 	$(RM) $(OBJECTS)
+	$(RM) -rfv ft_nm.dSYM
 
 fclean: clean
 	@make -C ./libft fclean

@@ -122,4 +122,6 @@ int					get_next_line(const int fd, char **line);
 
 void				ft_qsort_str(char **arr, int l, int r);
 
+int					ft_strequxact(char *s1, char *s2, size_t len);
+
 #endif

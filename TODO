@@ -1,2 +1,6 @@
 TODO:
-		- develop or find method of parsing static library files to extract individual objects files.
+
+		- Handle fat format files.
+		- Manage byte order.
+		- Add type field
+		- Add hex data
