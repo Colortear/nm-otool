@@ -25,6 +25,8 @@
 # include <unistd.h>
 # include <mach-o/ranlib.h>
 
+enum err {OPEN_FAIL, STAT_FAIL, MAP_FAIL, UNMAP_FAIL, FRMT_ERR};
+
 typedef struct		s_ofile
 {
 	struct ar_hdr	*ar;

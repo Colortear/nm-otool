@@ -141,23 +141,46 @@ void	strtable_64_qsort(char *str, struct nlist_64 *arr, int l, int r)
 		strtable_64_qsort(str, arr, i, r);
 }
 
+char	get_type(struct nlist_64 info)
+{
+	char	ret;
+
+	ret = 0;
+	if ((info.n_type & N_TYPE) == N_UNDF)
+		ret = 'U';
+	else if ((info.n_type & N_TYPE) == N_ABS)
+		ret = 'A';
+	else if ((info.n_type & N_TYPE) == N_INDR)
+		ret = 'I';
+	else if ((info.n_type & N_TYPE) == N_SECT)
+	{
+
+}
+
 void	extract_load_commands
 		(char *ptr, struct symtab_command *sym)
 {
 	char			*strtable;
 	struct nlist_64	*arr;
 	uint32_t		i;
+	char			*value;
+	char			type;
 
 	arr = (void *)ptr + sym->symoff;
 	strtable = (void *)ptr + sym->stroff;
-	i = 0;
+	i = -1;
+	type = 0;
 	strtable_64_qsort(strtable, arr, 0, sym->nsyms - 1);
-	while (i < sym->nsyms)
-	{
+	while (++i < sym->nsyms)
 		if (!(arr[i].n_type & N_STAB))
+		{
+			type = get_type(arr[i]);
+			value = get_value(arr[i], type);
+			type ? ft_putstr(value) : write(1, "                 ", 17);
+			type ? write(1, &type, 1) : write(1, " ", 1);
+			write(1, " ", 1);
 			ft_putendl(strtable + arr[i].n_un.n_strx);
-		i++;
-	}
+		}
 }
 
 void	get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
@@ -167,7 +190,7 @@ void	get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
 	uint32_t				i;
 
 	i = 0;
-	lc = (void *)ptr + sizeof(*h);
+	lc = (void *)ptr + sizeof(struct mach_header_64 *);
 	sym = NULL;
 	while (i < ncmds)
 	{
@@ -205,7 +228,29 @@ void	ft_nm(char *ptr, char *path)
 		handle_64(ptr);
 }
 
-int 	main(int ac, char **av)
+int		return_error(char *path, int err_code)
+{
+	write(2, "ft_nm: ", 7);
+	if (err_code == OPEN_FAIL)
+	{
+		ft_putstr_fd(path, 2);
+		write(2, ": No such file or directory.\n", 29);
+	}
+	else if (err_code == STAT_FAIL)
+		write(2, "fstat fail\n", 11);
+	else if (err_code == MAP_FAIL)
+		write(2, "mmap fail\n", 10);
+	else if (err_code == UNMAP_FAIL)
+		write(2, "munmap fail\n", 12);
+	else if (err_code == FRMT_ERR)
+	{
+		ft_putstr_fd(path, 2);
+		write(2, ": The file was not recognized as a valid object file\n\n", 54);
+	}
+	return (EXIT_FAILURE);
+}
+
+int 	main(int argc, char **argv)
 {
 	int			fd;
 	int			i;
@@ -213,34 +258,20 @@ int 	main(int ac, char **av)
 	struct stat	buf;
 
 	i = 1;
-	if (ac < 2)
+	if (argc < 2 && !(i = 0))
+		argv[0] = "a.out";
+	while (i < argc)
 	{
-		write(2, "Please give me an arg\n", 22);
-		return (EXIT_FAILURE);
-	}
-	while (i < ac)
-	{
-		if ((fd = open(av[i], O_RDONLY)) < 0)
-		{
-			write(2, "Open error\n", 11);
-			return (EXIT_FAILURE);
-		}
+		if ((fd = open(argv[i], O_RDONLY)) < 0)
+			return (return_error(argv[i], OPEN_FAIL));
 		if (fstat(fd, &buf) < 0)
-		{
-			write(2, "fstat fail\n", 11);
-			return (EXIT_FAILURE);
-		}
-		if ((ptr = mmap(0, buf.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0)) == MAP_FAILED)
-		{
-			write(2, "mmap fail\n", 10);
-			return (EXIT_FAILURE);
-		}
-		ft_nm(ptr, av[i]);
+			return (return_error(NULL, STAT_FAIL));
+		if ((ptr = mmap(0, buf.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE,
+						fd, 0)) == MAP_FAILED)
+			return (return_error(NULL, MAP_FAIL));
+		ft_nm(ptr, argv[i]);
 		if (munmap(ptr, buf.st_size) < 0)
-		{
-			write(2, "munmap fail\n", 12);
-			return (EXIT_FAILURE);
-		}
+			return (return_error(NULL, UNMAP_FAIL));
 		i++;
 	}
 	return (EXIT_SUCCESS);
