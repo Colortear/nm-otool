@@ -141,24 +141,108 @@ void	strtable_64_qsort(char *str, struct nlist_64 *arr, int l, int r)
 		strtable_64_qsort(str, arr, i, r);
 }
 
-char	get_type(struct nlist_64 info)
+char	get_sect(t_segs *seg, struct nlist_64 info)
+{
+	t_segs				*tmp;
+	uint32_t			i;
+	struct section_64	*tmp_sect;
+
+	tmp = seg;
+	while (tmp)
+	{
+		tmp_sect = (struct section_64 *)((char *)(tmp->seg) +
+				sizeof(struct segment_command_64));
+		i = 0;
+		if (name)
+			printf("A\n");
+		while (i < tmp->seg->nsects)
+		{
+			if (i == info.n_sect)
+				
+			tmp_sect = (void *)tmp_sect + sizeof(struct section_64);
+			i++;
+		}
+		tmp = tmp->next;
+	}
+	return ('s');
+}
+
+char	get_type(struct nlist_64 info, t_segs *seg)
 {
 	char	ret;
+	uint8_t	t;
 
 	ret = 0;
-	if ((info.n_type & N_TYPE) == N_UNDF)
+	t = info.n_type & N_TYPE;
+	if (t == N_UNDF || t == N_PBUD)
 		ret = 'U';
-	else if ((info.n_type & N_TYPE) == N_ABS)
+	else if (t  == N_ABS)
 		ret = 'A';
-	else if ((info.n_type & N_TYPE) == N_INDR)
+	else if (t == N_INDR)
 		ret = 'I';
-	else if ((info.n_type & N_TYPE) == N_SECT)
-	{
+	else if (t == N_SECT)
+		ret = get_sect(seg, info);
+	else
+		ret = '-';
+	return (ret);
+}
 
+int		hex_len(uint64_t value)
+{
+	int	i;
+
+	i = 0;
+	while (value > 15)
+	{
+		value = value / 16;
+		i++;
+	}
+	return (i);
+}
+
+char	*get_value(struct nlist_64 info, char type)
+{
+	uint64_t	value;
+	int			len;
+	int			it;
+	char		*tab;
+	char		*ret;
+
+	ret = NULL;
+	len = hex_len(info.n_value);
+	it = 0;
+	value = info.n_value;
+	tab = "0123456789abcdef";
+	if (type != 'U' && type != '-')
+	{
+		ret = (char *)malloc(sizeof(char) * 17);
+		ret[16] = 0;
+		while (it++ < 16 - len)
+			ret[it] = '0';
+		len = 15;
+		while (value)
+		{
+			ret[len] = tab[value % 16];
+			value /= 16;
+			len--;
+		}
+	}
+	return (ret);
+}
+
+void	free_seg(t_segs *seg)
+{
+	t_segs	*tmp;
+	while (seg)
+	{
+		tmp = seg;
+		seg = seg->next;
+		free(tmp);
+	}
 }
 
 void	extract_load_commands
-		(char *ptr, struct symtab_command *sym)
+		(char *ptr, struct symtab_command *sym, t_segs *seg)
 {
 	char			*strtable;
 	struct nlist_64	*arr;
@@ -169,30 +253,62 @@ void	extract_load_commands
 	arr = (void *)ptr + sym->symoff;
 	strtable = (void *)ptr + sym->stroff;
 	i = -1;
-	type = 0;
 	strtable_64_qsort(strtable, arr, 0, sym->nsyms - 1);
 	while (++i < sym->nsyms)
 		if (!(arr[i].n_type & N_STAB))
 		{
-			type = get_type(arr[i]);
+			type = get_type(arr[i], seg);
 			value = get_value(arr[i], type);
-			type ? ft_putstr(value) : write(1, "                 ", 17);
-			type ? write(1, &type, 1) : write(1, " ", 1);
+			if (type != 'U' && type != '-')
+				ft_putstr(value);
+			else
+				write(1, "                 ", 17);
+			write(1, &type, 1);
 			write(1, " ", 1);
 			ft_putendl(strtable + arr[i].n_un.n_strx);
+			free(value);
 		}
+	free_seg(seg);
 }
 
-void	get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
+t_segs	*add_seg(t_segs *seg, struct load_command *lc)
+{
+	t_segs	*new;
+	t_segs	*tmp;
+
+	new = (t_segs *)malloc(sizeof(t_segs));
+	new->seg = (struct segment_command_64 *)lc;
+	new->next = NULL;
+	tmp = seg;
+	if (!seg)
+		seg = new;
+	else
+	{
+		while (tmp->next)
+			tmp = tmp->next;
+		tmp->next = new;
+	}
+	return (seg);
+}
+
+void	get_symtab(char *ptr, uint32_t ncmds)
 {
 	struct symtab_command	*sym;
+	t_segs					*seg;
 	struct load_command		*lc;
+	struct load_command		*save;
 	uint32_t				i;
 
-	i = 0;
-	lc = (void *)ptr + sizeof(struct mach_header_64 *);
-	sym = NULL;
-	while (i < ncmds)
+	i = -1;
+	lc = (void *)ptr + sizeof(struct mach_header_64);
+	save = lc;
+	seg = NULL;
+	while (!(sym = NULL) && ++i < ncmds)
+		if (lc->cmd == LC_SEGMENT_64 && (seg = add_seg(seg, lc)))
+			lc = (void *)lc + lc->cmdsize;
+	i = -1;
+	lc = save;
+	while (++i < ncmds)
 	{
 		if (lc->cmd == LC_SYMTAB)
 		{
@@ -200,9 +316,8 @@ void	get_symtab(struct mach_header_64 *h, char *ptr, uint32_t ncmds)
 			break ;
 		}
 		lc = (void *)lc + lc->cmdsize;
-		i++;
 	}
-	extract_load_commands(ptr, sym);
+	sym ? extract_load_commands(ptr, sym, seg) : 0;
 }
 
 void	handle_64(char *ptr)
@@ -214,18 +329,24 @@ void	handle_64(char *ptr)
 	i = 0;
 	header = (struct mach_header_64 *)ptr;
 	ncmds = header->ncmds;
-	get_symtab(header, ptr, ncmds);
+	get_symtab(ptr, ncmds);
 }
 
 void	ft_nm(char *ptr, char *path)
 {
 	uint32_t	magic_number;
 
+    magic_number = *(uint32_t *)ptr;
+/*	if (magic_number == FAT_MAGIC || magic_number == FAT_CIGAM)
+		handle_fat(ptr, path);*/
 	if (path && !ft_strncmp(ptr, ARMAG, SARMAG))
 		handle_ar(ptr, path);
-    magic_number = *(uint32_t *)ptr;
-    if (magic_number == MH_MAGIC_64)
+	else if (magic_number == MH_MAGIC_64)
 		handle_64(ptr);
+	/*else if (magic_number == MH_MAGIC)
+		handle_32(ptr);
+	else if (magic_number == MH_CIGAM || magic_number == MH_CIGAM_64)
+		return_error(path, ENDIAN_ERR);*/
 }
 
 int		return_error(char *path, int err_code)
@@ -242,6 +363,8 @@ int		return_error(char *path, int err_code)
 		write(2, "mmap fail\n", 10);
 	else if (err_code == UNMAP_FAIL)
 		write(2, "munmap fail\n", 12);
+	else if (err_code == ENDIAN_ERR)
+		write(2, "big endian not supported\n", 25);
 	else if (err_code == FRMT_ERR)
 	{
 		ft_putstr_fd(path, 2);

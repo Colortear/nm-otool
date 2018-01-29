@@ -25,16 +25,22 @@
 # include <unistd.h>
 # include <mach-o/ranlib.h>
 
-enum err {OPEN_FAIL, STAT_FAIL, MAP_FAIL, UNMAP_FAIL, FRMT_ERR};
+enum err {OPEN_FAIL, STAT_FAIL, MAP_FAIL, UNMAP_FAIL, FRMT_ERR, ENDIAN_ERR};
 
-typedef struct		s_ofile
+typedef struct					s_ofile
 {
-	struct ar_hdr	*ar;
-	struct ranlib	*ran;
-	size_t			name_len;
-	char			*name;
-	char			*data;
-}					t_ofile;
+	struct ar_hdr				*ar;
+	struct ranlib				*ran;
+	size_t						name_len;
+	char						*name;
+	char						*data;
+}								t_ofile;
+
+typedef struct					s_segs
+{
+	struct segment_command_64	*seg;
+	struct s_segs				*next;
+}								t_segs;
 
 void	ft_nm(char *ptr, char *path);
 
