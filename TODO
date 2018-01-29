@@ -1,6 +1,4 @@
 TODO:
-
 		- Handle fat format files.
-		- Manage byte order.
-		- Add type field
-		- Add hex data
+		- Handle 32-bit format. 
+		- do otool -t

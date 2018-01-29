@@ -10,8 +10,7 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../include/nm-otool.h"
-#include <stdio.h>
+#include "../include/nm_otool.h"
 
 int		ar_cmp(t_ofile **arr, int l, int r, int i)
 {
@@ -145,26 +144,29 @@ char	get_sect(t_segs *seg, struct nlist_64 info)
 {
 	t_segs				*tmp;
 	uint32_t			i;
+	uint32_t			total;
 	struct section_64	*tmp_sect;
 
 	tmp = seg;
-	while (tmp)
+	total = 0;
+	while ((i = -1) && tmp)
 	{
 		tmp_sect = (struct section_64 *)((char *)(tmp->seg) +
 				sizeof(struct segment_command_64));
-		i = 0;
-		if (name)
-			printf("A\n");
-		while (i < tmp->seg->nsects)
-		{
-			if (i == info.n_sect)
-				
+		while (++i < tmp->seg->nsects && ++total < info.n_sect)
 			tmp_sect = (void *)tmp_sect + sizeof(struct section_64);
-			i++;
+		if (total == info.n_sect)
+		{
+			if (!ft_strcmp(tmp_sect->sectname, SECT_TEXT))
+				return ('T');
+			else if (!ft_strcmp(tmp_sect->sectname, SECT_BSS))
+				return ('B');
+			else if (!ft_strcmp(tmp_sect->sectname, SECT_DATA))
+				return ('D');
 		}
 		tmp = tmp->next;
 	}
-	return ('s');
+	return ('S');
 }
 
 char	get_type(struct nlist_64 info, t_segs *seg)
@@ -200,34 +202,32 @@ int		hex_len(uint64_t value)
 	return (i);
 }
 
-char	*get_value(struct nlist_64 info, char type)
+void	get_value_64(struct nlist_64 info, char type)
 {
 	uint64_t	value;
 	int			len;
 	int			it;
 	char		*tab;
-	char		*ret;
+	char		ret[17];
 
-	ret = NULL;
 	len = hex_len(info.n_value);
-	it = 0;
 	value = info.n_value;
 	tab = "0123456789abcdef";
-	if (type != 'U' && type != '-')
+	if (!(it = 0) && (type == 'U' || type == '-'))
 	{
-		ret = (char *)malloc(sizeof(char) * 17);
-		ret[16] = 0;
-		while (it++ < 16 - len)
-			ret[it] = '0';
-		len = 15;
-		while (value)
-		{
-			ret[len] = tab[value % 16];
-			value /= 16;
-			len--;
-		}
+		write(1, "                 ", 17);
+		return ;
 	}
-	return (ret);
+	ret[16] = ' ';
+	while (it++ < 16 - len)
+		ret[it] = '0';
+	len = 15;
+	while (value && (ret[len] = tab[value % 16]))
+	{
+		value /= 16;
+		len--;
+	}
+	write(1, ret, 17);
 }
 
 void	free_seg(t_segs *seg)
@@ -241,13 +241,12 @@ void	free_seg(t_segs *seg)
 	}
 }
 
-void	extract_load_commands
-		(char *ptr, struct symtab_command *sym, t_segs *seg)
+	void	extract_load_commands
+(char *ptr, struct symtab_command *sym, t_segs *seg)
 {
 	char			*strtable;
 	struct nlist_64	*arr;
 	uint32_t		i;
-	char			*value;
 	char			type;
 
 	arr = (void *)ptr + sym->symoff;
@@ -258,15 +257,10 @@ void	extract_load_commands
 		if (!(arr[i].n_type & N_STAB))
 		{
 			type = get_type(arr[i], seg);
-			value = get_value(arr[i], type);
-			if (type != 'U' && type != '-')
-				ft_putstr(value);
-			else
-				write(1, "                 ", 17);
+			get_value_64(arr[i], type);
 			write(1, &type, 1);
 			write(1, " ", 1);
 			ft_putendl(strtable + arr[i].n_un.n_strx);
-			free(value);
 		}
 	free_seg(seg);
 }
@@ -336,17 +330,17 @@ void	ft_nm(char *ptr, char *path)
 {
 	uint32_t	magic_number;
 
-    magic_number = *(uint32_t *)ptr;
-/*	if (magic_number == FAT_MAGIC || magic_number == FAT_CIGAM)
+	magic_number = *(uint32_t *)ptr;
+	/*	if (magic_number == FAT_MAGIC || magic_number == FAT_CIGAM)
 		handle_fat(ptr, path);*/
 	if (path && !ft_strncmp(ptr, ARMAG, SARMAG))
 		handle_ar(ptr, path);
 	else if (magic_number == MH_MAGIC_64)
 		handle_64(ptr);
 	/*else if (magic_number == MH_MAGIC)
-		handle_32(ptr);
-	else if (magic_number == MH_CIGAM || magic_number == MH_CIGAM_64)
-		return_error(path, ENDIAN_ERR);*/
+	  handle_32(ptr);
+	  else if (magic_number == MH_CIGAM || magic_number == MH_CIGAM_64)
+	  return_error(path, ENDIAN_ERR);*/
 }
 
 int		return_error(char *path, int err_code)
