@@ -1,8 +1,10 @@
 NAME1 = ft_nm
 
 CC = gcc
-SRC = src/nm.c
-OBJECTS = src/nm.o
+SRC = src/ar.c src/file64.c src/file_info_getters_64.c src/nm.c \
+	  src/sort.c src/sort_64.c src/util.c
+OBJECTS = src/ar.o src/file64.o src/file_info_getters_64.o src/nm.o \
+	  src/sort.o src/sort_64.o src/util.o
 INC = -Iinclude -I./libft/includes
 CFLAGS = -g -Wall -Werror -Wextra
 LFLAGS = -Llibft

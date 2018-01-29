@@ -1,35 +1,58 @@
 #include "../include/nm_otool.h"
 
-int		ar_cmp(t_ofile **arr, int l, int r, int i)
+void	print_file_name(char *name, char *path, uint32_t len)
 {
-	return (ft_strcmp(arr[i]->name, arr[(l + r) / 2]->name));
+	write(1, "\n", 1);
+	ft_putstr(path);
+	write(1, "(", 1);
+	len ? write(1, name, len) : write(1, name, 16);
+	write(1, "):\n", 3);
 }
 
-void	qsort_ar(t_ofile **arr, int l, int r)
+void	free_seg_64(t_segs_64 *seg)
 {
-	int		i;
-	int		j;
-	t_ofile	*temp;
-
-	i = l;
-	j = r;
-	while (i <= j)
+	t_segs_64	*tmp;
+	while (seg)
 	{
-		while (ft_strcmp(arr[i]->name, arr[(l + r) / 2]->name) < 0 && i < r)
-			i++;
-		while (ft_strcmp(arr[j]->name, arr[(l + r) / 2]->name) > 0 && j > l)
-			j--;
-		if (i <= j)
-		{
-			temp = arr[i];
-			arr[i] = arr[j];
-			arr[j] = temp;
-			i++;
-			j--;
-		}
+		tmp = seg;
+		seg = seg->next;
+		free(tmp);
 	}
-	if (l < j)
-		qsort_ar(arr, l, j);
-	if (i < r)
-		qsort_ar(arr, i, r);
+}
+
+void	free_seg(t_segs *seg)
+{
+	t_segs	*tmp;
+	while (seg)
+	{
+		tmp = seg;
+		seg = seg->next;
+		free(tmp);
+	}
+}
+
+int		hex_len_64(uint64_t value)
+{
+	int	i;
+
+	i = 0;
+	while (value > 15)
+	{
+		value = value / 16;
+		i++;
+	}
+	return (i);
+}
+
+int		hex_len(uint32_t value)
+{
+	int	i;
+
+	i = 0;
+	while (value > 7)
+	{
+		value = value / 8;
+		i++;
+	}
+	return (i);
 }
