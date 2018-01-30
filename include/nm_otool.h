@@ -48,6 +48,9 @@ typedef struct					s_segs
 	struct s_segs				*next;
 }								t_segs;
 
+/*
+** ~~~ ft_nm ~~~
+*/
 
 /*
 ** nm.c
@@ -102,5 +105,9 @@ void		extract_load_commands_64(char *ptr, struct symtab_command *sym,
 t_segs_64	*add_seg_64(t_segs_64 *seg, struct load_command *lc);
 void		get_symtab_64(char *ptr, uint32_t ncmds);
 void		handle_64(char *ptr);
+
+/*
+** ~~~ ft_otool ~~~
+*/
 
 #endif
