@@ -60,7 +60,7 @@ int			return_error(char *path, int err_code);
 ** sort_64.c
 */
 
-void		strtable_64_qsort(char *str, struct nlist_64 *arr, int l, int r);
+void		strtable_64_qsort(char *str, struct nlist_64 **arr, int l, int r);
 
 /*
 ** sort.c
@@ -89,9 +89,9 @@ void		handle_ar(char *ptr, char *path);
 ** file_info_getters_64.c
 */
 
-char		get_sect_64(t_segs_64 *seg, struct nlist_64 info);
-char		get_type_64(struct nlist_64 info, t_segs_64 *seg);
-void		get_value_64(struct nlist_64 info, char type);
+char		get_sect_64(t_segs_64 *seg, struct nlist_64 *info);
+char		get_type_64(struct nlist_64 *info, t_segs_64 *seg);
+void		get_value_64(struct nlist_64 *info, char type);
 
 /*
 ** file64.c

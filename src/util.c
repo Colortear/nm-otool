@@ -1,4 +1,5 @@
 #include "../include/nm_otool.h"
+#include <stdio.h>
 
 void	print_file_name(char *name, char *path, uint32_t len)
 {
@@ -36,7 +37,7 @@ int		hex_len_64(uint64_t value)
 	int	i;
 
 	i = 0;
-	while (value > 15)
+	while (value)
 	{
 		value = value / 16;
 		i++;

@@ -23,10 +23,10 @@ void	ft_nm(char *ptr, char *path)
 		handle_ar(ptr, path);
 	else if (magic_number == MH_MAGIC_64)
 		handle_64(ptr);
-	/*else if (magic_number == MH_MAGIC)
-	  handle_32(ptr);
-	  else if (magic_number == MH_CIGAM || magic_number == MH_CIGAM_64)
-	  return_error(path, ENDIAN_ERR);*/
+/*	else if (magic_number == MH_MAGIC)
+		handle_32(ptr);*/
+	else if (magic_number == MH_CIGAM || magic_number == MH_CIGAM_64)
+		return_error(path, ENDIAN_ERR);
 }
 
 int		return_error(char *path, int err_code)

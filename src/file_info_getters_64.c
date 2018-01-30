@@ -1,6 +1,7 @@
 #include "../include/nm_otool.h"
+#include <stdio.h>
 
-char	get_sect_64(t_segs_64 *seg, struct nlist_64 info)
+char	get_sect_64(t_segs_64 *seg, struct nlist_64 *info)
 {
 	t_segs_64			*tmp;
 	uint32_t			i;
@@ -13,9 +14,9 @@ char	get_sect_64(t_segs_64 *seg, struct nlist_64 info)
 	{
 		tmp_sect = (struct section_64 *)((char *)(tmp->seg) +
 				sizeof(struct segment_command_64));
-		while (++i < tmp->seg->nsects && ++total < info.n_sect)
+		while (++i < tmp->seg->nsects && ++total < info->n_sect)
 			tmp_sect = (void *)tmp_sect + sizeof(struct section_64);
-		if (total == info.n_sect)
+		if (total == info->n_sect)
 		{
 			if (!ft_strcmp(tmp_sect->sectname, SECT_TEXT))
 				return ('T');
@@ -29,13 +30,13 @@ char	get_sect_64(t_segs_64 *seg, struct nlist_64 info)
 	return ('S');
 }
 
-char	get_type_64(struct nlist_64 info, t_segs_64 *seg)
+char	get_type_64(struct nlist_64 *info, t_segs_64 *seg)
 {
 	char	ret;
 	uint8_t	t;
 
 	ret = 0;
-	t = info.n_type & N_TYPE;
+	t = info->n_type & N_TYPE;
 	if (t == N_UNDF || t == N_PBUD)
 		ret = 'U';
 	else if (t  == N_ABS)
@@ -46,10 +47,12 @@ char	get_type_64(struct nlist_64 info, t_segs_64 *seg)
 		ret = get_sect_64(seg, info);
 	else
 		ret = '-';
+	if (!(info->n_type & N_EXT))
+		ret = ft_tolower(ret);
 	return (ret);
 }
 
-void	get_value_64(struct nlist_64 info, char type)
+void	get_value_64(struct nlist_64 *info, char type)
 {
 	uint64_t	value;
 	int			len;
@@ -57,8 +60,8 @@ void	get_value_64(struct nlist_64 info, char type)
 	char		*tab;
 	char		ret[17];
 
-	len = hex_len(info.n_value);
-	value = info.n_value;
+	len = hex_len_64(info->n_value);
+	value = info->n_value;
 	tab = "0123456789abcdef";
 	if (!(it = 0) && (type == 'U' || type == '-'))
 	{
@@ -67,7 +70,7 @@ void	get_value_64(struct nlist_64 info, char type)
 	}
 	ret[16] = ' ';
 	while (it++ < 16 - len)
-		ret[it] = '0';
+		ret[it - 1] = '0';
 	len = 15;
 	while (value && (ret[len] = tab[value % 16]))
 	{

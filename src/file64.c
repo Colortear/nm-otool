@@ -1,27 +1,42 @@
 #include "../include/nm_otool.h"
+
+struct nlist_64	**create_nlist_64_table(struct nlist_64 *arr, uint32_t len)
+{
+	struct nlist_64 **ret;
+	uint32_t		i;
+
+	ret = (struct nlist_64 **)malloc(sizeof(struct nlist_64 *) * len);
+	i = -1;
+	while (++i < len)
+		ret[i] = &arr[i];
+	return (ret);
+}
 	
 void	extract_load_commands_64
 (char *ptr, struct symtab_command *sym, t_segs_64 *seg)
 {
 	char			*strtable;
 	struct nlist_64	*arr;
+	struct nlist_64	**list;
 	uint32_t		i;
 	char			type;
 
 	arr = (void *)ptr + sym->symoff;
 	strtable = (void *)ptr + sym->stroff;
+	list = create_nlist_64_table(arr, sym->nsyms);
+	strtable_64_qsort(strtable, list, 0, sym->nsyms - 1);
 	i = -1;
-	strtable_64_qsort(strtable, arr, 0, sym->nsyms - 1);
 	while (++i < sym->nsyms)
-		if (!(arr[i].n_type & N_STAB))
+		if (!(list[i]->n_type & N_STAB))
 		{
-			type = get_type_64(arr[i], seg);
-			get_value_64(arr[i], type);
+			type = get_type_64(list[i], seg);
+			get_value_64(list[i], type);
 			write(1, &type, 1);
 			write(1, " ", 1);
-			ft_putendl(strtable + arr[i].n_un.n_strx);
+			ft_putendl(strtable + list[i]->n_un.n_strx);
 		}
 	free_seg_64(seg);
+	free(list);
 }
 
 t_segs_64	*add_seg_64(t_segs_64 *seg, struct load_command *lc)
